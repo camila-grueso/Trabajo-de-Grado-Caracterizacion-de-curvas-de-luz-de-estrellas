@@ -79,17 +79,6 @@ for (k in 2:3){
           names.arg = top_20_itemset$items,main=paste("Mas Frecuente",k,"-itemset"),col = "skyblue2")
 }
 
-#####------ Filtrado de itemsets frecuentes, involucrando un producto especifico, suponiendo interés en el producto whole milk  #####
-
-itemsets_filtrado <- arules::subset(itemset,
-                                    subset = items %in% "whole milk")
-inspect(sort(itemsets_filtrado, by = "support", decreasing = TRUE)[1:20])
-
-# suponiendo interés en en la venta conjunta de whole milk and rolls/buns
-
-itemsets_filtrado <- arules::subset(itemset,
-                                    subset = items %ain% c("whole milk","rolls/buns"))
-inspect(sort(itemsets_filtrado, by = "support", decreasing = TRUE)[1:min(20,length(itemsets_filtrado))])
 
 ########################################################################################
 ## 1.3. generación de Reglas de Asociación - Apriori                          ####
@@ -190,20 +179,4 @@ legend("topright",
        lwd=2, 
        cex=0.8, 
        title="Funciones")
-
-star <- rep("C",16)
-nc <- rep("NC",73)
-starc <- c(star,nc)
-
-barplot(table(starc))
-
-prop <- prop.table(table(starc))
-windows()
-bp <- barplot(table(starc), 
-              col="skyblue2", 
-              main="Tipos de estrellas variables binarias eclipsantes",
-              ylab="Número de estrellas", xlab ="Tipo de estrella")
-grid(nx=NA, ny=NULL, col="gray", lty="dotted")
-# Añadir texto de proporción encima de cada barra
-text(bp, table(starc) -4, labels=paste0(round(prop*100,1),"% - ",table(starc)))
 

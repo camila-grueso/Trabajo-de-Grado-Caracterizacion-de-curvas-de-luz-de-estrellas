@@ -1,0 +1,86 @@
+## Carga de librerias 
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+import requests
+import tarfile
+import os
+from lxml import html
+import re
+import numpy as np
+import random
+import re
+
+## Url del repositorio de datos 
+
+root = 'https://ogledb.astrouw.edu.pl/~ogle/OCVS/query.php?qtype=ecl&first=0&q=UkdvZD8d8biGFGRswS6fVH4m9fdS1xsMN9v4cVgpXBzk_Lxciu.wgxkS3j9vcijrcbWVZCzN5u29HF.miGipFXmF3VT1WSq18yPZ5J3kTZmWDdvEQ8AFGMHARHGPetBxKh6F3WDAArWd.YlbDRJXfVv68ybYcpIZtr5IH3WbgqEv6VYOoi3xR0LEz1r.HECcXTni7B9Ask1tc4ncy67tdFYXvInRHVojEJPVX2syGNwnlI.ARudC32EJRFCfbPQifQ8LfVaorjlqEnQsA140Zbocayoi.FWJTgOgTv.wpg40aBXd3VemBuY_IfflDn.pSG12XcqjWI9lx0HpZQEcmiVKVHDvN.cuqveW1WAsz8Zv1gwBWPUGAibVMiXVFc42G4dU50s3RVFiSfaBef01_E6MF7IDv6U39J.qnZ.RNd14M29I97raUyQ62hDlT7zPWNdSKmqJfNSrpjlXzpQsi1P3kV.4uhDbx17pE3P5xwQdQvgsMm_Ybet9ltbkVctKUoM9Y908RWanQpW.eIjhM6jzFl62t7.wJPSWCI2Up.WaeCkRzP7ZIGUcBB2kNyMBKs9zhYzfXUB7oAsmbuL5wtItposUTm0DkAghp9OqsEM4DtQCWPPbNWvYV2oif5Yp45wKHeuoh_SFGSX5QgGkbkop38LFWUpBtrsgXHeD3V0K2Qe76x1YDDX0R3spXc8Kjk2XeBnr0HMUcFkrZ25T8nzOPfY-&page='
+urls = []
+for i in range(0, 9986):
+  urls.append(root + str(i))
+#print(urls)
+
+del urls[0]
+
+domain = "https://ogledb.astrouw.edu.pl/~ogle/OCVS/"
+
+c = []
+for i in urls[:9985]:
+  response = requests.get(i)
+  if response.status_code == 200:
+    soup = BeautifulSoup(response.text, 'html.parser')
+    table = soup.find('table', class_='data')
+    
+    links = []                                                ## Descarga de todas las url donde se encuentran los datos de las estrellas almacenados
+    if table:
+        
+        for row in table.find_all('tr'):
+            for link in row.find_all('a'):
+             links.append(link.get('href'))
+        df_links = pd.DataFrame(links, columns=['link'])
+  else:
+      print('404:', response.status_code)
+
+  page_individual = [domain + x for x in links]
+  c.append(page_individual) 
+
+ 
+## Descarga de de los datos de cada estrella (Base de Datos)
+
+domain = "https://ogledb.astrouw.edu.pl/~ogle/OCVS/"
+DatosStarEB = pd.DataFrame(columns=['HJD','Magn_Inf','Error','Estrella','Url','Tipo','P','To','A_1_2','Mag_Mean'])
+sin_info = []
+id = 0
+sin_info1 = 0
+
+for page in c[1:9986]:
+  for star in page:
+    result = requests.get(star) # Respuesta
+    content = result.text 
+    soup = BeautifulSoup(content,'lxml') # Contenido de la pagina de la estrella
+    ti = soup.find_all("div", class_="left")
+    tipo = ti[3].get_text(strip=True)
+    data = soup.find('td').find('a') 
+    tag = BeautifulSoup(str(data), 'html.parser').a
+    p = soup.find_all("div", class_="params")
+    mag = p[0].get_text(strip=True)
+    p0 = p[1].get_text(strip=True)
+    
+
+    if pd.isnull(tag):
+      sin_info.append(star)
+      sin_info1 +=1
+        
+    else:
+      id +=1
+      est = domain+tag['href'] # Extraer el contenido dentro de las comillas del atributo href
+      re = requests.get(est)
+      df = pd.DataFrame([t.split(' ') for t in re.text.split('\n')], columns=['HJD','Magn_Inf','Error'])
+      df['Estrella'] = id
+      df['Url'] = est
+      df['Tipo']= tipo 
+      df['P'] = p0[3:11]
+      df['To']= p0[19:28]
+      df['A_1_2']=p0[32:61]  
+      df['Mag_Mean'] = mag 
+      DatosStarEB = pd.concat([DatosStarEB,df])
